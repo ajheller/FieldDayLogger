@@ -68,7 +68,15 @@ class QSO:
         """Return a copy with changes applied."""
         clean_changes = {}
         for key, value in changes.items():
-            if key in {"call", "qso_class", "section", "band", "mode", "grid"}:
+            if key in {
+                "call",
+                "qso_class",
+                "section",
+                "band",
+                "mode",
+                "grid",
+                "operator_call",
+            }:
                 clean_changes[key] = str(value).upper()
             elif key in {"frequency", "power"}:
                 clean_changes[key] = int(value)

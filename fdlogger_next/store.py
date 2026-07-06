@@ -212,6 +212,44 @@ class EventStore:
             ).fetchall()
         return [self._qso_from_contact_row(row) for row in rows]
 
+    def get_qso(self, qso_id, include_deleted=False):
+        """Return one QSO from the materialized contact table."""
+        deleted_filter = "" if include_deleted else "and deleted = 0"
+        with sqlite3.connect(self.database) as conn:
+            row = conn.execute(
+                f"""
+                select {CONTACT_SELECT}
+                from contacts
+                where qso_id = ?
+                {deleted_filter}
+                """,
+                (qso_id,),
+            ).fetchone()
+        if row is None:
+            return None
+        return self._qso_from_contact_row(row)
+
+    def find_duplicates(self, call, band, mode, exclude_qso_id="") -> List[QSO]:
+        """Return active QSOs that match the Field Day duplicate key."""
+        call = str(call).strip().upper()
+        band = str(band).strip().upper().replace("M", "")
+        mode = str(mode).strip().upper()
+        with sqlite3.connect(self.database) as conn:
+            rows = conn.execute(
+                f"""
+                select {CONTACT_SELECT}
+                from contacts
+                where deleted = 0
+                  and call = ?
+                  and band = ?
+                  and mode = ?
+                  and qso_id != ?
+                order by date_time, qso_id
+                """,
+                (call, band, mode, exclude_qso_id),
+            ).fetchall()
+        return [self._qso_from_contact_row(row) for row in rows]
+
     def rebuild_contacts(self):
         """Rebuild the materialized contact table from the event log."""
         with sqlite3.connect(self.database) as conn:

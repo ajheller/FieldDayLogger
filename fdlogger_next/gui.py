@@ -23,6 +23,8 @@ class MainWindow(QtWidgets.QMainWindow):
         self.store = EventStore(database)
         self.station_id = station_id
         self.operator_call = operator_call
+        self.editing_qso_id = None
+        self.qso_ids = []
 
         self.setWindowTitle("FieldDayLogger Next")
         self.resize(980, 620)
@@ -63,15 +65,19 @@ class MainWindow(QtWidgets.QMainWindow):
         self.database_label = QtWidgets.QLabel(str(database))
         self.database_label.setTextInteractionFlags(QtCore.Qt.TextSelectableByMouse)
 
-        add_button = QtWidgets.QPushButton("Add QSO")
+        self.save_button = QtWidgets.QPushButton("Add QSO")
+        self.edit_button = QtWidgets.QPushButton("Edit")
+        self.delete_button = QtWidgets.QPushButton("Delete")
         clear_button = QtWidgets.QPushButton("Clear")
         rebuild_button = QtWidgets.QPushButton("Rebuild")
 
-        add_button.clicked.connect(self.add_qso)
+        self.save_button.clicked.connect(self.save_qso)
+        self.edit_button.clicked.connect(self.edit_selected_qso)
+        self.delete_button.clicked.connect(self.delete_selected_qso)
         clear_button.clicked.connect(self.clear_form)
         rebuild_button.clicked.connect(self.rebuild_contacts)
         for widget in (self.call_edit, self.class_edit, self.section_edit):
-            widget.returnPressed.connect(self.add_qso)
+            widget.returnPressed.connect(self.save_qso)
 
         form = QtWidgets.QGridLayout()
         form.setHorizontalSpacing(10)
@@ -94,9 +100,14 @@ class MainWindow(QtWidgets.QMainWindow):
         form.addWidget(self.station_edit, 3, 0, 1, 2)
         form.addWidget(QtWidgets.QLabel("Operator"), 2, 2)
         form.addWidget(self.operator_edit, 3, 2, 1, 2)
-        form.addWidget(add_button, 3, 4)
+        form.addWidget(self.save_button, 3, 4)
         form.addWidget(clear_button, 3, 5)
         form.addWidget(rebuild_button, 3, 6)
+
+        action_bar = QtWidgets.QHBoxLayout()
+        action_bar.addWidget(self.edit_button)
+        action_bar.addWidget(self.delete_button)
+        action_bar.addStretch(1)
 
         footer = QtWidgets.QHBoxLayout()
         footer.addWidget(QtWidgets.QLabel("Database"))
@@ -105,6 +116,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
         layout = QtWidgets.QVBoxLayout()
         layout.addLayout(form)
+        layout.addLayout(action_bar)
         layout.addWidget(self.table, 1)
         layout.addLayout(footer)
 
@@ -115,7 +127,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.refresh()
         self.call_edit.setFocus()
 
-    def add_qso(self):
+    def save_qso(self):
         """Validate and store a QSO from the form."""
         call = self.call_edit.text().strip()
         qso_class = self.class_edit.text().strip()
@@ -128,23 +140,135 @@ class MainWindow(QtWidgets.QMainWindow):
             )
             return
 
-        qso = QSO.create(
-            call=call,
-            qso_class=qso_class,
-            section=section,
-            band=self.band_combo.currentText(),
-            mode=self.mode_combo.currentText(),
-            power=self.power_spin.value(),
-            frequency=self.frequency_spin.value(),
-            station_id=self.station_edit.text().strip(),
-            operator_call=self.operator_edit.text().strip(),
+        changes = self.form_values()
+        duplicates = self.store.find_duplicates(
+            call=changes["call"],
+            band=changes["band"],
+            mode=changes["mode"],
+            exclude_qso_id=self.editing_qso_id or "",
         )
-        self.store.create_qso(qso)
+        if duplicates and not self.confirm_duplicate(duplicates):
+            return
+
+        if self.editing_qso_id:
+            station_id, operator_call = self.event_actor()
+            self.store.update_qso(
+                self.editing_qso_id,
+                changes,
+                station_id=station_id,
+                operator_call=operator_call,
+            )
+            self.statusBar().showMessage(f"Updated {changes['call']}", 4000)
+        else:
+            qso = QSO.create(**changes)
+            self.store.create_qso(qso)
+            self.statusBar().showMessage(f"Logged {qso.call}", 4000)
+
         self.clear_form(keep_station=True)
         self.refresh()
 
+    def form_values(self):
+        """Return field values for creating or updating a QSO."""
+        return {
+            "call": self.call_edit.text().strip(),
+            "qso_class": self.class_edit.text().strip(),
+            "section": self.section_edit.text().strip(),
+            "band": self.band_combo.currentText(),
+            "mode": self.mode_combo.currentText(),
+            "power": self.power_spin.value(),
+            "frequency": self.frequency_spin.value(),
+            "station_id": self.station_edit.text().strip(),
+            "operator_call": self.operator_edit.text().strip(),
+        }
+
+    def event_actor(self, qso=None):
+        """Return station/operator metadata for an update or delete event."""
+        station_id = self.station_edit.text().strip()
+        operator_call = self.operator_edit.text().strip()
+        if qso:
+            station_id = station_id or qso.station_id
+            operator_call = operator_call or qso.operator_call
+        return station_id, operator_call
+
+    def confirm_duplicate(self, duplicates):
+        """Ask before adding or saving a duplicate contact."""
+        first = duplicates[0]
+        suffix = "" if len(duplicates) == 1 else f" and {len(duplicates) - 1} more"
+        message = (
+            f"{first.call} is already logged on {first.band}M {first.mode}{suffix}.\n\n"
+            "Log it anyway?"
+        )
+        response = QtWidgets.QMessageBox.question(
+            self,
+            "Duplicate QSO",
+            message,
+            QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No,
+            QtWidgets.QMessageBox.No,
+        )
+        return response == QtWidgets.QMessageBox.Yes
+
+    def selected_qso_id(self):
+        """Return the selected row's QSO id, if any."""
+        row = self.table.currentRow()
+        if row < 0 or row >= len(self.qso_ids):
+            return None
+        return self.qso_ids[row]
+
+    def edit_selected_qso(self):
+        """Load the selected QSO into the form for editing."""
+        qso_id = self.selected_qso_id()
+        if not qso_id:
+            return
+        qso = self.store.get_qso(qso_id)
+        if not qso:
+            self.refresh()
+            return
+
+        self.editing_qso_id = qso.qso_id
+        self.call_edit.setText(qso.call)
+        self.class_edit.setText(qso.qso_class)
+        self.section_edit.setText(qso.section)
+        self.set_combo_text(self.band_combo, qso.band)
+        self.set_combo_text(self.mode_combo, qso.mode)
+        self.power_spin.setValue(qso.power)
+        self.frequency_spin.setValue(qso.frequency)
+        self.station_edit.setText(qso.station_id)
+        self.operator_edit.setText(qso.operator_call)
+        self.save_button.setText("Save QSO")
+        self.statusBar().showMessage(f"Editing {qso.call}", 4000)
+        self.call_edit.setFocus()
+
+    def delete_selected_qso(self):
+        """Soft-delete the selected QSO through an event."""
+        qso_id = self.selected_qso_id()
+        if not qso_id:
+            return
+        qso = self.store.get_qso(qso_id)
+        if not qso:
+            self.refresh()
+            return
+
+        response = QtWidgets.QMessageBox.question(
+            self,
+            "Delete QSO",
+            f"Delete {qso.call} on {qso.band}M {qso.mode}?",
+            QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No,
+            QtWidgets.QMessageBox.No,
+        )
+        if response != QtWidgets.QMessageBox.Yes:
+            return
+
+        station_id, operator_call = self.event_actor(qso)
+        self.store.delete_qso(qso.qso_id, station_id, operator_call)
+        if self.editing_qso_id == qso.qso_id:
+            self.clear_form(keep_station=True)
+        self.refresh()
+        self.statusBar().showMessage(f"Deleted {qso.call}", 4000)
+
     def clear_form(self, keep_station=False):
         """Clear the QSO entry fields."""
+        self.editing_qso_id = None
+        self.save_button.setText("Add QSO")
         self.call_edit.clear()
         self.class_edit.clear()
         self.section_edit.clear()
@@ -153,6 +277,13 @@ class MainWindow(QtWidgets.QMainWindow):
             self.station_edit.setText(self.station_id)
             self.operator_edit.setText(self.operator_call)
         self.call_edit.setFocus()
+
+    @staticmethod
+    def set_combo_text(combo, text):
+        """Select an existing combo value."""
+        index = combo.findText(str(text).upper().replace("M", ""))
+        if index >= 0:
+            combo.setCurrentIndex(index)
 
     def rebuild_contacts(self):
         """Rebuild the materialized contact table and refresh the display."""
@@ -163,6 +294,7 @@ class MainWindow(QtWidgets.QMainWindow):
     def refresh(self):
         """Refresh the table and score from the store."""
         qsos = self.store.list_qsos()
+        self.qso_ids = [qso.qso_id for qso in qsos]
         self.table.setRowCount(len(qsos))
         for row, qso in enumerate(qsos):
             values = (

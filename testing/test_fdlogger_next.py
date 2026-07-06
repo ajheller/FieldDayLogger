@@ -30,7 +30,7 @@ class EventStoreTest(unittest.TestCase):
             store.create_qso(qso)
             store.update_qso(
                 qso.qso_id,
-                {"qso_class": "2a", "section": "sv"},
+                {"qso_class": "2a", "section": "sv", "operator_call": "n6xyz"},
                 station_id="station-1",
                 operator_call="ak6im",
             )
@@ -39,6 +39,7 @@ class EventStoreTest(unittest.TestCase):
             self.assertEqual(updated.call, "K6ABC")
             self.assertEqual(updated.qso_class, "2A")
             self.assertEqual(updated.section, "SV")
+            self.assertEqual(updated.operator_call, "N6XYZ")
 
             store.delete_qso(qso.qso_id, station_id="station-1", operator_call="ak6im")
             self.assertEqual(store.list_qsos(), [])
@@ -72,6 +73,26 @@ class EventStoreTest(unittest.TestCase):
 
             self.assertEqual(len(list(store.events())), 1)
             self.assertEqual(len(store.list_qsos(include_deleted=True)), 1)
+
+    def test_get_qso_and_find_duplicates(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            store = EventStore(Path(tmpdir) / "next.db")
+            qso = QSO.create("k6abc", "1a", "scv", "20m", "cw", 100)
+            other_band = QSO.create("K6ABC", "1A", "SCV", "40", "CW", 100)
+
+            store.create_qso(qso)
+            store.create_qso(other_band)
+
+            self.assertEqual(store.get_qso(qso.qso_id).call, "K6ABC")
+            duplicates = store.find_duplicates("k6abc", "20m", "cw")
+            self.assertEqual([duplicate.qso_id for duplicate in duplicates], [qso.qso_id])
+            self.assertEqual(store.find_duplicates("K6ABC", "20", "CW", qso.qso_id), [])
+            self.assertEqual(store.find_duplicates("K6ABC", "15", "CW"), [])
+
+            store.delete_qso(qso.qso_id, "", "")
+            self.assertIsNone(store.get_qso(qso.qso_id))
+            self.assertEqual(store.get_qso(qso.qso_id, include_deleted=True).call, "K6ABC")
+            self.assertEqual(store.find_duplicates("K6ABC", "20", "CW"), [])
 
     def test_sequence_is_per_station(self):
         with tempfile.TemporaryDirectory() as tmpdir:
