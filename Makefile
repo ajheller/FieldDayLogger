@@ -36,7 +36,7 @@ check: test compile
 
 .PHONY: install-dev
 install-dev:
-	pipx inject fdlogger --editable .
+	pipx inject fdlogger --editable . --force
 
 .PHONY: commands
 commands:
