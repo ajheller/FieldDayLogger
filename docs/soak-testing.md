@@ -9,6 +9,28 @@ materialized contact table.
 The command writes JSONL samples with operation counts, QSO counts, score,
 latency, RSS, rebuild count, restart count, and integrity check count.
 
+## Setup
+
+From the repository checkout, the Makefile targets run through Python modules
+and do not require installing the console scripts first:
+
+```bash
+make check
+make smoke-soak
+```
+
+To expose the prototype commands in your shell, install the checkout into pipx:
+
+```bash
+make install-dev
+rehash
+make commands
+```
+
+`make install-dev` reinstalls the local editable checkout as the `fdlogger` pipx
+app so that all project scripts are exposed: `fdlogger`, `fdlogger-next`,
+`fdlogger-next-cli`, and `fdlogger-next-soak`.
+
 ## Short Smoke Test
 
 ```bash

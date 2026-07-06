@@ -38,15 +38,15 @@ fdlogger_integrations
   CAT, WSJT-X UDP, N1MM UDP, Cloudlog, QRZ/HamDB/HamQTH.
 
 fdlogger_gui
-  PySide6 desktop app, table models, operator workflows, diagnostics.
+  Qt desktop app, table models, operator workflows, diagnostics.
 
 fdlogger_cli
   Export, repair, import, diagnostics, headless smoke tests.
 ```
 
 The current package can remain intact while these modules are prototyped under a
-new namespace. That makes it possible to compare behavior and migrate one
-workflow at a time.
+new namespace. The current prototype namespace is `fdlogger_next`, which keeps
+the rewrite experiment separate from the existing `fdlogger` GUI.
 
 ## Storage Model
 
@@ -126,15 +126,32 @@ Integration test helpers should fake:
 - Cloudlog responses
 - QRZ/HamDB/HamQTH responses
 
-## First Prototype Milestones
+## Prototype Status
 
-1. Define event and QSO dataclasses.
-2. Create a new SQLite schema for event log plus materialized contacts.
-3. Implement QSO create/edit/delete as event replay.
-4. Port scoring and export helpers to pure functions against the new model.
-5. Add a CLI that can create a sample DB and export ADIF/Cabrillo.
-6. Prototype hub sync locally with explicit ACKs.
-7. Add a minimal PySide6 logger screen once the core is proven.
+Implemented on this branch:
+
+- `fdlogger_next` QSO and event dataclasses.
+- SQLite event log plus materialized `contacts` table.
+- QSO create/edit/delete through append-only events.
+- Materialized contact rebuild from replayed events.
+- Store-level duplicate lookup by call, band, and mode.
+- Pure score calculation against the new QSO model.
+- `fdlogger-next-cli` for DB init, sample contacts, listing, scoring, and
+  projection rebuilds.
+- `fdlogger-next` minimal PyQt5 logger screen with add, edit, delete, duplicate
+  warning, rebuild, and live score display.
+- `fdlogger-next-soak` store-only synthetic load harness.
+- Developer Makefile shortcuts for checks, editable pipx install, GUI launch,
+  and soak runs.
+
+Near-term remaining milestones:
+
+1. Keyboard-speed logging pass: sticky defaults, tab order, Enter/Esc behavior.
+2. Preferences for station identity, operator call, class, section, and DB path.
+3. Export helpers against the new model, with ADIF/Cabrillo golden-file tests.
+4. GUI soak or operator simulator using the Qt event loop.
+5. Prototype hub/peer sync locally with idempotent event ingest and explicit ACKs.
+6. Import existing `FieldDay.db` rows as `qso.created` events.
 
 ## Migration Notes
 
