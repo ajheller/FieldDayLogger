@@ -5,6 +5,9 @@ not to replace the current application quickly, but to outline a safer shape for
 a Field Day logger that can survive tired operators, bad LANs, clock drift,
 unplugged cables, and post-event cleanup.
 
+For the broader forward-looking plan, see
+[`rewrite-roadmap.md`](rewrite-roadmap.md).
+
 ## Goals
 
 - Keep local logging fast and reliable even when the network is broken.
