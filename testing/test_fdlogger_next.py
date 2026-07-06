@@ -1,12 +1,15 @@
 """Tests for the rewrite prototype."""
 
+import json
 import sqlite3
 import tempfile
 import unittest
+from contextlib import closing
 from pathlib import Path
 
 from fdlogger_next.models import QSO
 from fdlogger_next.scoring import calculate_score
+from fdlogger_next.soak import SoakConfig, SoakRunner
 from fdlogger_next.store import EventStore
 
 
@@ -54,7 +57,7 @@ class EventStoreTest(unittest.TestCase):
             store.create_qso(qso)
             store.update_qso(qso.qso_id, {"section": "SV"}, "", "")
 
-            with sqlite3.connect(store.database) as conn:
+            with closing(sqlite3.connect(store.database)) as conn:
                 conn.execute("delete from contacts")
                 conn.commit()
 
@@ -119,6 +122,53 @@ class ScoringTest(unittest.TestCase):
 
         self.assertEqual(calculate_score(qsos), (10, 5))
         self.assertEqual(calculate_score(qsos, qrp=True, alt_power=True), (25, 5))
+
+
+class SoakRunnerTest(unittest.TestCase):
+    """Synthetic soak runner behavior."""
+
+    def test_store_soak_writes_samples_and_keeps_integrity(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            database = Path(tmpdir) / "soak.db"
+            log = Path(tmpdir) / "soak.jsonl"
+            config = SoakConfig(
+                database=str(database),
+                seconds=3600,
+                rate=0,
+                log=str(log),
+                seed=73,
+                check_interval=0,
+                rebuild_interval=0,
+                restart_interval=0,
+                max_operations=50,
+                create_percent=60,
+                edit_percent=25,
+                delete_percent=15,
+                progress=False,
+            )
+
+            sample = SoakRunner(config).run()
+
+            self.assertEqual(sample.operations, 50)
+            self.assertGreater(sample.creates, 0)
+            self.assertGreater(sample.edits + sample.deletes, 0)
+            self.assertGreater(sample.checks, 0)
+            self.assertTrue(log.exists())
+            records = [
+                json.loads(line)
+                for line in log.read_text(encoding="utf-8").splitlines()
+            ]
+            self.assertEqual(records[-1]["operations"], 50)
+            store = EventStore(database)
+            materialized = {
+                qso.qso_id: qso.to_dict()
+                for qso in store.list_qsos(include_deleted=True)
+            }
+            replayed = {
+                qso_id: qso.to_dict()
+                for qso_id, qso in store.replay().items()
+            }
+            self.assertEqual(materialized, replayed)
 
 
 if __name__ == "__main__":

@@ -2,6 +2,7 @@
 
 import json
 import sqlite3
+from contextlib import closing
 from pathlib import Path
 from typing import Dict, Iterable, List
 
@@ -39,7 +40,7 @@ class EventStore:
     def initialize(self):
         """Create tables if needed."""
         needs_rebuild = False
-        with sqlite3.connect(self.database) as conn:
+        with closing(sqlite3.connect(self.database)) as conn:
             current_version = conn.execute("pragma user_version").fetchone()[0]
             conn.execute(
                 """
@@ -98,7 +99,7 @@ class EventStore:
 
     def next_sequence(self, station_id):
         """Return the next local sequence number for a station."""
-        with sqlite3.connect(self.database) as conn:
+        with closing(sqlite3.connect(self.database)) as conn:
             row = conn.execute(
                 "select coalesce(max(sequence), 0) + 1 from events where station_id = ?",
                 (station_id,),
@@ -107,7 +108,7 @@ class EventStore:
 
     def append(self, event: Event):
         """Append an event if it has not already been stored."""
-        with sqlite3.connect(self.database) as conn:
+        with closing(sqlite3.connect(self.database)) as conn:
             cursor = conn.execute(
                 """
                 insert or ignore into events (
@@ -169,7 +170,7 @@ class EventStore:
 
     def events(self) -> Iterable[Event]:
         """Yield events in replay order."""
-        with sqlite3.connect(self.database) as conn:
+        with closing(sqlite3.connect(self.database)) as conn:
             rows = conn.execute(
                 """
                 select event_id, event_type, station_id, operator_call, sequence,
@@ -201,7 +202,7 @@ class EventStore:
     def list_qsos(self, include_deleted=False) -> List[QSO]:
         """Return QSOs from the materialized contact table."""
         where = "" if include_deleted else "where deleted = 0"
-        with sqlite3.connect(self.database) as conn:
+        with closing(sqlite3.connect(self.database)) as conn:
             rows = conn.execute(
                 f"""
                 select {CONTACT_SELECT}
@@ -215,7 +216,7 @@ class EventStore:
     def get_qso(self, qso_id, include_deleted=False):
         """Return one QSO from the materialized contact table."""
         deleted_filter = "" if include_deleted else "and deleted = 0"
-        with sqlite3.connect(self.database) as conn:
+        with closing(sqlite3.connect(self.database)) as conn:
             row = conn.execute(
                 f"""
                 select {CONTACT_SELECT}
@@ -234,7 +235,7 @@ class EventStore:
         call = str(call).strip().upper()
         band = str(band).strip().upper().replace("M", "")
         mode = str(mode).strip().upper()
-        with sqlite3.connect(self.database) as conn:
+        with closing(sqlite3.connect(self.database)) as conn:
             rows = conn.execute(
                 f"""
                 select {CONTACT_SELECT}
@@ -252,7 +253,7 @@ class EventStore:
 
     def rebuild_contacts(self):
         """Rebuild the materialized contact table from the event log."""
-        with sqlite3.connect(self.database) as conn:
+        with closing(sqlite3.connect(self.database)) as conn:
             conn.execute("delete from contacts")
             rows = conn.execute(
                 """
