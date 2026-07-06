@@ -9,7 +9,7 @@ from .store import EventStore
 
 def build_parser():
     """Build the command parser."""
-    parser = argparse.ArgumentParser(prog="fdlogger-next")
+    parser = argparse.ArgumentParser(prog="fdlogger-next-cli")
     parser.add_argument("database", help="prototype SQLite database")
     subparsers = parser.add_subparsers(dest="command", required=True)
 

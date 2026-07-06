@@ -41,3 +41,5 @@ where = ["."]
 
 [project.scripts]
 fdlogger = "fdlogger.__main__:run"
+fdlogger-next = "fdlogger_next.gui:run"
+fdlogger-next-cli = "fdlogger_next.cli:run"
