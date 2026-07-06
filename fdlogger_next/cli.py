@@ -31,6 +31,7 @@ def build_parser():
     add_parser.add_argument("--operator", default="")
 
     subparsers.add_parser("list", help="list active QSOs")
+    subparsers.add_parser("rebuild", help="rebuild materialized contacts")
     subparsers.add_parser("score", help="show current score")
     return parser
 
@@ -83,6 +84,11 @@ def run(argv=None):
                 f"{qso.qso_id} {qso.call} {qso.qso_class} {qso.section} "
                 f"{qso.band}M {qso.mode} {qso.power}W"
             )
+        return 0
+
+    if args.command == "rebuild":
+        count = store.rebuild_contacts()
+        print(f"rebuilt contacts from {count} events")
         return 0
 
     if args.command == "score":

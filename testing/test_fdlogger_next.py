@@ -1,5 +1,6 @@
 """Tests for the rewrite prototype."""
 
+import sqlite3
 import tempfile
 import unittest
 from pathlib import Path
@@ -43,6 +44,34 @@ class EventStoreTest(unittest.TestCase):
             self.assertEqual(store.list_qsos(), [])
             [deleted] = store.list_qsos(include_deleted=True)
             self.assertTrue(deleted.deleted)
+
+    def test_rebuild_contacts_from_events(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            store = EventStore(Path(tmpdir) / "next.db")
+            qso = QSO.create("K6ABC", "1A", "SCV", "20", "CW", 100)
+
+            store.create_qso(qso)
+            store.update_qso(qso.qso_id, {"section": "SV"}, "", "")
+
+            with sqlite3.connect(store.database) as conn:
+                conn.execute("delete from contacts")
+                conn.commit()
+
+            self.assertEqual(store.list_qsos(include_deleted=True), [])
+            self.assertEqual(store.rebuild_contacts(), 2)
+            [rebuilt] = store.list_qsos(include_deleted=True)
+            self.assertEqual(rebuilt.section, "SV")
+
+    def test_duplicate_event_does_not_update_contacts_twice(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            store = EventStore(Path(tmpdir) / "next.db")
+            qso = QSO.create("K6ABC", "1A", "SCV", "20", "CW", 100)
+
+            event = store.create_qso(qso)
+            store.append(event)
+
+            self.assertEqual(len(list(store.events())), 1)
+            self.assertEqual(len(store.list_qsos(include_deleted=True)), 1)
 
     def test_sequence_is_per_station(self):
         with tempfile.TemporaryDirectory() as tmpdir:
