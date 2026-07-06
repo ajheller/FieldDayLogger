@@ -1,0 +1,143 @@
+# FieldDayLogger Rewrite Architecture Sketch
+
+This branch is an experimental design space for a possible rewrite. The goal is
+not to replace the current application quickly, but to outline a safer shape for
+a Field Day logger that can survive tired operators, bad LANs, clock drift,
+unplugged cables, and post-event cleanup.
+
+## Goals
+
+- Keep local logging fast and reliable even when the network is broken.
+- Make every QSO add, edit, and delete recoverable and auditable.
+- Make scoring, duplicate detection, and exports testable without a GUI.
+- Support Linux and Raspberry Pi class machines as first-class targets.
+- Preserve practical Field Day workflows: keyboard-first logging, CW macros,
+  CAT, WSJT-X, N1MM packets, Cloudlog, and offline operation.
+- Prefer boring, inspectable local files over required cloud services.
+
+## Non-Goals
+
+- Do not require internet access during the event.
+- Do not require a central server for a single-station setup.
+- Do not make the GUI the source of truth for contest logic.
+- Do not rewrite everything before proving the sync and storage model.
+
+## Proposed Packages
+
+```text
+fdlogger_core
+  Contest rules, exchanges, sections, scoring, duplicate checks, ADIF/Cabrillo.
+
+fdlogger_store
+  SQLite schema, migrations, event log, materialized QSO view, sync state.
+
+fdlogger_sync
+  LAN discovery, station identity, durable message exchange, retry/reconcile.
+
+fdlogger_integrations
+  CAT, WSJT-X UDP, N1MM UDP, Cloudlog, QRZ/HamDB/HamQTH.
+
+fdlogger_gui
+  PySide6 desktop app, table models, operator workflows, diagnostics.
+
+fdlogger_cli
+  Export, repair, import, diagnostics, headless smoke tests.
+```
+
+The current package can remain intact while these modules are prototyped under a
+new namespace. That makes it possible to compare behavior and migrate one
+workflow at a time.
+
+## Storage Model
+
+Use SQLite as the durable local source of truth. Instead of directly mutating
+contacts as the primary record, store an append-only event stream:
+
+- `qso.created`
+- `qso.updated`
+- `qso.deleted`
+- `sync.received`
+- `sync.acknowledged`
+
+Each event should include:
+
+- event UUID
+- station UUID
+- operator call
+- wall-clock timestamp
+- local monotonic sequence number
+- payload JSON
+- sync status
+
+A materialized QSO table can be rebuilt from the event stream and optimized for
+GUI display, duplicate checks, and export generation.
+
+## Sync Model
+
+Multicast is useful for discovery, but should not be the only transport for
+reliable QSO sync.
+
+Suggested design:
+
+1. Use multicast or mDNS to find peers or a hub.
+2. Use TCP/WebSocket/HTTP for actual event exchange.
+3. Treat each sync message as idempotent.
+4. Acknowledge event UUIDs explicitly.
+5. Retry with attempt counts and backoff.
+6. Keep logging locally if the hub disappears.
+7. Reconcile when the hub or peers return.
+
+For small clubs, one station can act as a hub. If no hub is configured, the app
+should work as a single-station logger with the same local database model.
+
+## GUI Principles
+
+- Main screen is the logger, not a landing page.
+- Keyboard-first QSO entry.
+- Clear duplicate, dirty/synced, and server-seen indicators.
+- Diagnostics panel with:
+  - local station ID
+  - hub/peer status
+  - last packet time
+  - pending outbound events
+  - failed retries
+  - export paths
+- Panic export button that always writes local ADIF, Cabrillo, and CSV.
+
+## Test Strategy
+
+Core logic should be testable without Qt:
+
+- score calculation tests
+- duplicate detection tests
+- section parsing tests
+- ADIF/Cabrillo golden-file tests
+- SQLite migration tests
+- event replay tests
+- sync retry and idempotency tests
+- packet loss/reorder simulation
+
+Integration test helpers should fake:
+
+- rigctld
+- flrig
+- WSJT-X UDP
+- N1MM UDP listener
+- Cloudlog responses
+- QRZ/HamDB/HamQTH responses
+
+## First Prototype Milestones
+
+1. Define event and QSO dataclasses.
+2. Create a new SQLite schema for event log plus materialized contacts.
+3. Implement QSO create/edit/delete as event replay.
+4. Port scoring and export helpers to pure functions against the new model.
+5. Add a CLI that can create a sample DB and export ADIF/Cabrillo.
+6. Prototype hub sync locally with explicit ACKs.
+7. Add a minimal PySide6 logger screen once the core is proven.
+
+## Migration Notes
+
+The current `FieldDay.db` schema can be imported by converting each existing row
+into a `qso.created` event. Existing output formats should be preserved by
+golden-file tests before changing export internals.
