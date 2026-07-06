@@ -12,6 +12,12 @@ latency, RSS, rebuild count, restart count, and integrity check count.
 ## Short Smoke Test
 
 ```bash
+make smoke-soak
+```
+
+or directly:
+
+```bash
 fdlogger-next-soak soak.db \
   --seconds 60 \
   --rate 120 \
@@ -22,6 +28,12 @@ fdlogger-next-soak soak.db \
 ```
 
 ## 36 Hour Laptop Soak
+
+```bash
+make soak-36h
+```
+
+or directly:
 
 ```bash
 fdlogger-next-soak soak.db \
