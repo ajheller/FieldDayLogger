@@ -26,6 +26,8 @@ generate clean exports without hand-editing fragile files.
   configuration ceremony.
 - Accessibility is a core workflow requirement: normal logging should not
   require a mouse or perfect visual scanning.
+- Contest rules should become modular, but only after ARRL Field Day works
+  end-to-end and proves the shape of the abstraction.
 - Inspectable data: SQLite, JSON payloads, and plain exported files are easier
   to recover than opaque state.
 - Network skepticism: multicast can discover peers, but reliable sync needs
@@ -77,6 +79,24 @@ Paper logs should be a supported offline input path for operators who prefer
 paper or for stations recovering from equipment trouble. Cellphone photos plus
 OCR or LLM transcription can help, but reviewed CSV should be the import
 boundary. See [`paper-log-ingest.md`](paper-log-ingest.md).
+
+### Multi-Contest Mode
+
+The rewrite should eventually support contests beyond ARRL Field Day, such as
+Winter Field Day and ARRL VHF contests. The first working slice should still be
+Field Day-shaped; a contest abstraction should be extracted after scoring,
+export, duplicate detection, and replay are working for one real contest.
+
+The event store can stay contest-neutral by storing a contest id and flexible
+exchange payloads:
+
+```text
+contest_id = arrl_field_day
+exchange = {"class": "2A", "section": "SCV"}
+
+contest_id = arrl_vhf
+exchange = {"grid": "CM87"}
+```
 
 ## Roadmap
 
@@ -212,7 +232,51 @@ Exit criteria:
 - Operators can run a full mock event using the rewrite app.
 - Exports are submission-ready.
 
-### Phase 6: Deployment and Packaging
+### Phase 6: Contest Rule Modules
+
+Extract contest-specific behavior once the Field Day workflow is proven.
+
+Work:
+
+- define a small `ContestRules` interface
+- move ARRL Field Day exchange validation, duplicate keys, scoring, export
+  fields, time-window handling, and bonus categories into a rule module
+- keep the core event store independent of any one exchange shape
+- add Winter Field Day as the second contest, because it is culturally close to
+  Field Day but different enough to test the abstraction
+- add ARRL VHF later, because grids, rovers, band rules, and scoring are
+  different enough to expose weak assumptions
+- keep contest modules testable without Qt
+
+Possible package shape:
+
+```text
+fdlogger_core/
+  contests/
+    arrl_field_day.py
+    winter_field_day.py
+    arrl_vhf.py
+```
+
+Each contest module should own:
+
+- exchange fields and validation
+- duplicate key rules
+- band and mode rules
+- scoring rules
+- export format requirements
+- contest time-window rules
+- bonus categories, when supported
+
+Exit criteria:
+
+- ARRL Field Day behavior is unchanged after extraction.
+- Winter Field Day can log, score, detect duplicates, and export a practice
+  file using the same core storage model.
+- VHF contest support can be prototyped without contorting Field Day fields.
+- Contest-specific code does not leak back into the event store.
+
+### Phase 7: Deployment and Packaging
 
 Make it installable and understandable for a club, not just for the developer.
 
@@ -239,6 +303,8 @@ Exit criteria:
 - Do not port every integration before export correctness is proven.
 - Do not remove the existing app while the rewrite is still experimental.
 - Do not make the hub mandatory for normal single-station logging.
+- Do not generalize contest rules before Field Day scoring and exports are
+  proven.
 
 ## Open Questions
 
@@ -250,6 +316,9 @@ Exit criteria:
 - How should clock skew be displayed and repaired without slowing operators?
 - Should the alternate operator UX be a richer CLI, a TUI, a speech-first mode,
   or a combination?
+- What is the smallest contest-rule interface that supports Field Day, Winter
+  Field Day, and VHF contests without forcing all contests into the same
+  exchange shape?
 
 ## Suggested Next Slice
 
