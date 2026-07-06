@@ -9,6 +9,8 @@ For the broader forward-looking plan, see
 [`rewrite-roadmap.md`](rewrite-roadmap.md).
 For alternate UX and accessibility notes, see
 [`accessibility-ux.md`](accessibility-ux.md).
+For paper logs and OCR-assisted transcription, see
+[`paper-log-ingest.md`](paper-log-ingest.md).
 
 ## Goals
 
@@ -16,6 +18,7 @@ For alternate UX and accessibility notes, see
 - Make every QSO add, edit, and delete recoverable and auditable.
 - Make scoring, duplicate detection, and exports testable without a GUI.
 - Keep core logging workflows available through non-visual and non-mouse paths.
+- Support paper logs as a recoverable, auditable offline input path.
 - Support Linux and Raspberry Pi class machines as first-class targets.
 - Preserve practical Field Day workflows: keyboard-first logging, CW macros,
   CAT, WSJT-X, N1MM packets, Cloudlog, and offline operation.
@@ -64,6 +67,7 @@ contacts as the primary record, store an append-only event stream:
 - `qso.deleted`
 - `sync.received`
 - `sync.acknowledged`
+- `paper.imported`
 
 Each event should include:
 
@@ -74,6 +78,7 @@ Each event should include:
 - local monotonic sequence number
 - payload JSON
 - sync status
+- optional source metadata for paper, OCR, imports, or repairs
 
 A materialized QSO table can be rebuilt from the event stream and optimized for
 GUI display, duplicate checks, and export generation.

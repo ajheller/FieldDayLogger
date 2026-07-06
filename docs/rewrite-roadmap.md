@@ -60,6 +60,7 @@ The app should have explicit repair tools:
 - rebuild materialized contacts
 - compare replayed state against stored projections
 - import old `FieldDay.db` rows as `qso.created` events
+- import reviewed paper-log CSV rows with source metadata
 - merge event logs from multiple stations
 - export panic ADIF/Cabrillo/CSV from any surviving database
 
@@ -69,6 +70,13 @@ The CLI, GUI, and any future text-user-interface should share the same event
 store. A sight-impaired operator should be able to log, review, edit, delete,
 score, and export without relying on color, table position, or mouse-only
 controls. See [`accessibility-ux.md`](accessibility-ux.md).
+
+### Paper Log Mode
+
+Paper logs should be a supported offline input path for operators who prefer
+paper or for stations recovering from equipment trouble. Cellphone photos plus
+OCR or LLM transcription can help, but reviewed CSV should be the import
+boundary. See [`paper-log-ingest.md`](paper-log-ingest.md).
 
 ## Roadmap
 
@@ -110,6 +118,7 @@ Work:
 - clearer duplicate warning
 - basic CSV export for quick inspection
 - documented accessible practice workflow
+- printable paper-log sheet draft
 
 Exit criteria:
 
@@ -129,6 +138,7 @@ Work:
 - Cabrillo export from the new model
 - golden-file tests for exports
 - import current `FieldDay.db` rows as events
+- import reviewed paper-log CSV rows with sheet/row/source-image metadata
 - migration tests with representative old databases
 - better integrity diagnostics in the CLI
 
@@ -137,6 +147,8 @@ Exit criteria:
 - Existing known-good logs export identically or with reviewed, documented
   differences.
 - Imported current-format databases can be rebuilt and exported.
+- Paper-imported QSOs can be traced back to sheet id, row number, and source
+  image.
 - CLI repair and export commands work without Qt.
 
 ### Phase 3: Long-Run Local Soak

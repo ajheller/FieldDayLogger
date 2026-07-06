@@ -9,6 +9,9 @@ This document is written for the experimental `fdlogger_next` prototype. It
 describes what is available now, what is only partially available, and what the
 rewrite should grow toward.
 
+For paper-log operators and cellphone-photo transcription, see
+[`paper-log-ingest.md`](paper-log-ingest.md).
+
 ## Current Available Paths
 
 ### Command Line
@@ -115,6 +118,7 @@ The rewrite should treat these as product requirements, not polish:
 
 - Add a curses/textual-style operator mode or a line-oriented interactive mode.
 - Add a screen-reader-friendly log review command.
+- Add reviewed paper-log CSV import as another non-GUI input path.
 - Add configurable spoken or terminal-bell alerts for duplicate and error states.
 - Add explicit diagnostics commands for score, QSO count, last QSO, and pending
   sync state.
