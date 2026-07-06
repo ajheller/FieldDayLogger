@@ -3,8 +3,6 @@ SOAK_CMD ?= $(PYTHON) -m fdlogger_next.soak
 
 SOAK_DB ?= soak.db
 SOAK_LOG ?= soak.jsonl
-SMOKE_SOAK_DB ?= /tmp/fdlogger-next-smoke-soak.db
-SMOKE_SOAK_LOG ?= /tmp/fdlogger-next-smoke-soak.jsonl
 
 .PHONY: help
 help:
@@ -36,7 +34,7 @@ check: test compile
 
 .PHONY: install-dev
 install-dev:
-	pipx inject fdlogger --editable . --force
+	pipx install --editable . --force
 
 .PHONY: commands
 commands:
@@ -50,17 +48,18 @@ gui:
 
 .PHONY: smoke-soak
 smoke-soak:
-	$(SOAK_CMD) $(SMOKE_SOAK_DB) \
+	@tmpdir=$$(mktemp -d -t fdlogger-next-smoke-soak.XXXXXX); \
+	$(SOAK_CMD) $$tmpdir/soak.db \
 		--seconds 3600 \
 		--rate 0 \
 		--max-operations 100 \
 		--check-interval 0 \
 		--rebuild-interval 0 \
 		--restart-interval 0 \
-		--log $(SMOKE_SOAK_LOG) \
+		--log $$tmpdir/soak.jsonl \
 		--seed 11 \
-		--quiet
-	@tail -n 1 $(SMOKE_SOAK_LOG)
+		--quiet; \
+	tail -n 1 $$tmpdir/soak.jsonl
 
 .PHONY: soak-12h
 soak-12h:
