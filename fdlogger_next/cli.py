@@ -30,6 +30,23 @@ def build_parser():
     add_parser.add_argument("--station", default="station-1")
     add_parser.add_argument("--operator", default="")
 
+    edit_parser = subparsers.add_parser("edit", help="edit an active QSO")
+    edit_parser.add_argument("qso_id")
+    edit_parser.add_argument("--call")
+    edit_parser.add_argument("--class-name", dest="qso_class")
+    edit_parser.add_argument("--section")
+    edit_parser.add_argument("--band")
+    edit_parser.add_argument("--mode")
+    edit_parser.add_argument("--power", type=int)
+    edit_parser.add_argument("--frequency", type=int)
+    edit_parser.add_argument("--station", default="")
+    edit_parser.add_argument("--operator", default="")
+
+    delete_parser = subparsers.add_parser("delete", help="delete an active QSO")
+    delete_parser.add_argument("qso_id")
+    delete_parser.add_argument("--station", default="")
+    delete_parser.add_argument("--operator", default="")
+
     subparsers.add_parser("list", help="list active QSOs")
     subparsers.add_parser("rebuild", help="rebuild materialized contacts")
     subparsers.add_parser("score", help="show current score")
@@ -76,6 +93,53 @@ def run(argv=None):
         )
         store.create_qso(qso)
         print(qso.qso_id)
+        return 0
+
+    if args.command == "edit":
+        qso = store.get_qso(args.qso_id)
+        if not qso:
+            print(f"qso not found: {args.qso_id}")
+            return 1
+        changes = {}
+        for key in (
+            "call",
+            "qso_class",
+            "section",
+            "band",
+            "mode",
+            "power",
+            "frequency",
+        ):
+            value = getattr(args, key)
+            if value is not None:
+                changes[key] = value
+        if not changes:
+            print("no changes requested")
+            return 1
+        store.update_qso(
+            args.qso_id,
+            changes,
+            station_id=args.station or qso.station_id,
+            operator_call=args.operator or qso.operator_call,
+        )
+        updated = store.get_qso(args.qso_id)
+        print(
+            f"{updated.qso_id} {updated.call} {updated.qso_class} "
+            f"{updated.section} {updated.band}M {updated.mode} {updated.power}W"
+        )
+        return 0
+
+    if args.command == "delete":
+        qso = store.get_qso(args.qso_id)
+        if not qso:
+            print(f"qso not found: {args.qso_id}")
+            return 1
+        store.delete_qso(
+            args.qso_id,
+            station_id=args.station or qso.station_id,
+            operator_call=args.operator or qso.operator_call,
+        )
+        print(f"deleted {qso.qso_id} {qso.call}")
         return 0
 
     if args.command == "list":

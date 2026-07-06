@@ -1,12 +1,14 @@
 """Tests for the rewrite prototype."""
 
+import io
 import json
 import sqlite3
 import tempfile
 import unittest
-from contextlib import closing
+from contextlib import closing, redirect_stdout
 from pathlib import Path
 
+from fdlogger_next.cli import run as cli_run
 from fdlogger_next.models import QSO
 from fdlogger_next.scoring import calculate_score
 from fdlogger_next.soak import SoakConfig, SoakRunner
@@ -169,6 +171,56 @@ class SoakRunnerTest(unittest.TestCase):
                 for qso_id, qso in store.replay().items()
             }
             self.assertEqual(materialized, replayed)
+
+
+class CliTest(unittest.TestCase):
+    """Prototype command-line behavior."""
+
+    def test_cli_can_add_edit_delete_qso(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            database = str(Path(tmpdir) / "cli.db")
+
+            with redirect_stdout(io.StringIO()):
+                self.assertEqual(cli_run([database, "init"]), 0)
+            output = io.StringIO()
+            with redirect_stdout(output):
+                status = cli_run(
+                    [
+                        database,
+                        "add",
+                        "--call",
+                        "k6abc",
+                        "--class-name",
+                        "1a",
+                        "--section",
+                        "scv",
+                        "--band",
+                        "20m",
+                        "--mode",
+                        "cw",
+                        "--power",
+                        "100",
+                    ]
+                )
+            self.assertEqual(status, 0)
+            qso_id = output.getvalue().strip()
+
+            output = io.StringIO()
+            with redirect_stdout(output):
+                status = cli_run([database, "edit", qso_id, "--section", "sv"])
+            self.assertEqual(status, 0)
+            self.assertIn(" K6ABC 1A SV 20M CW 100W", output.getvalue())
+
+            output = io.StringIO()
+            with redirect_stdout(output):
+                status = cli_run([database, "delete", qso_id])
+            self.assertEqual(status, 0)
+            self.assertIn(f"deleted {qso_id} K6ABC", output.getvalue())
+
+            output = io.StringIO()
+            with redirect_stdout(output):
+                self.assertEqual(cli_run([database, "score"]), 0)
+            self.assertEqual(output.getvalue().strip(), "score=0 base=0")
 
 
 if __name__ == "__main__":

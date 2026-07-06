@@ -70,6 +70,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.delete_button = QtWidgets.QPushButton("Delete")
         clear_button = QtWidgets.QPushButton("Clear")
         rebuild_button = QtWidgets.QPushButton("Rebuild")
+        self.configure_accessibility(clear_button, rebuild_button)
 
         self.save_button.clicked.connect(self.save_qso)
         self.edit_button.clicked.connect(self.edit_selected_qso)
@@ -82,23 +83,34 @@ class MainWindow(QtWidgets.QMainWindow):
         form = QtWidgets.QGridLayout()
         form.setHorizontalSpacing(10)
         form.setVerticalSpacing(8)
-        form.addWidget(QtWidgets.QLabel("Call"), 0, 0)
+        call_label = self.field_label("Call", self.call_edit)
+        class_label = self.field_label("Class", self.class_edit)
+        section_label = self.field_label("Section", self.section_edit)
+        band_label = self.field_label("Band", self.band_combo)
+        mode_label = self.field_label("Mode", self.mode_combo)
+        power_label = self.field_label("Power", self.power_spin)
+        frequency_label = self.field_label("Frequency", self.frequency_spin)
+        station_label = self.field_label("Station", self.station_edit)
+        operator_label = self.field_label("Operator", self.operator_edit)
+        database_label = self.field_label("Database", self.database_label)
+
+        form.addWidget(call_label, 0, 0)
         form.addWidget(self.call_edit, 1, 0)
-        form.addWidget(QtWidgets.QLabel("Class"), 0, 1)
+        form.addWidget(class_label, 0, 1)
         form.addWidget(self.class_edit, 1, 1)
-        form.addWidget(QtWidgets.QLabel("Section"), 0, 2)
+        form.addWidget(section_label, 0, 2)
         form.addWidget(self.section_edit, 1, 2)
-        form.addWidget(QtWidgets.QLabel("Band"), 0, 3)
+        form.addWidget(band_label, 0, 3)
         form.addWidget(self.band_combo, 1, 3)
-        form.addWidget(QtWidgets.QLabel("Mode"), 0, 4)
+        form.addWidget(mode_label, 0, 4)
         form.addWidget(self.mode_combo, 1, 4)
-        form.addWidget(QtWidgets.QLabel("Power"), 0, 5)
+        form.addWidget(power_label, 0, 5)
         form.addWidget(self.power_spin, 1, 5)
-        form.addWidget(QtWidgets.QLabel("Frequency"), 0, 6)
+        form.addWidget(frequency_label, 0, 6)
         form.addWidget(self.frequency_spin, 1, 6)
-        form.addWidget(QtWidgets.QLabel("Station"), 2, 0)
+        form.addWidget(station_label, 2, 0)
         form.addWidget(self.station_edit, 3, 0, 1, 2)
-        form.addWidget(QtWidgets.QLabel("Operator"), 2, 2)
+        form.addWidget(operator_label, 2, 2)
         form.addWidget(self.operator_edit, 3, 2, 1, 2)
         form.addWidget(self.save_button, 3, 4)
         form.addWidget(clear_button, 3, 5)
@@ -110,7 +122,7 @@ class MainWindow(QtWidgets.QMainWindow):
         action_bar.addStretch(1)
 
         footer = QtWidgets.QHBoxLayout()
-        footer.addWidget(QtWidgets.QLabel("Database"))
+        footer.addWidget(database_label)
         footer.addWidget(self.database_label, 1)
         footer.addWidget(self.score_label)
 
@@ -126,6 +138,47 @@ class MainWindow(QtWidgets.QMainWindow):
 
         self.refresh()
         self.call_edit.setFocus()
+
+    @staticmethod
+    def field_label(text, buddy):
+        """Create a label linked to a field for keyboard and assistive tech."""
+        label = QtWidgets.QLabel(text)
+        label.setBuddy(buddy)
+        return label
+
+    def configure_accessibility(self, clear_button, rebuild_button):
+        """Set names and descriptions for assistive technologies."""
+        accessible_fields = (
+            (self.call_edit, "Call sign", "Call sign for the contact."),
+            (self.class_edit, "Field Day class", "Exchange class, such as 1A."),
+            (self.section_edit, "ARRL section", "Exchange section, such as SCV."),
+            (self.band_combo, "Band", "Band for this contact."),
+            (self.mode_combo, "Mode", "Mode for this contact."),
+            (self.power_spin, "Power", "Transmit power in watts."),
+            (self.frequency_spin, "Frequency", "Frequency in hertz, if known."),
+            (self.station_edit, "Station ID", "Local station identifier."),
+            (self.operator_edit, "Operator call", "Operator call sign."),
+            (self.database_label, "Database path", "Current SQLite database path."),
+            (self.score_label, "Current score", "Current QSO count and score."),
+        )
+        for widget, name, description in accessible_fields:
+            widget.setAccessibleName(name)
+            widget.setAccessibleDescription(description)
+
+        self.table.setAccessibleName("QSO log")
+        self.table.setAccessibleDescription("Active logged contacts.")
+        self.statusBar().setAccessibleName("Status")
+        self.statusBar().setAccessibleDescription("Latest logger status message.")
+
+        accessible_buttons = (
+            (self.save_button, "Add or save QSO"),
+            (self.edit_button, "Edit selected QSO"),
+            (self.delete_button, "Delete selected QSO"),
+            (clear_button, "Clear QSO entry fields"),
+            (rebuild_button, "Rebuild contacts from event log"),
+        )
+        for button, description in accessible_buttons:
+            button.setAccessibleDescription(description)
 
     def save_qso(self):
         """Validate and store a QSO from the form."""

@@ -24,6 +24,8 @@ generate clean exports without hand-editing fragile files.
   event log.
 - Operator speed first: the main screen should favor keyboard flow, not
   configuration ceremony.
+- Accessibility is a core workflow requirement: normal logging should not
+  require a mouse or perfect visual scanning.
 - Inspectable data: SQLite, JSON payloads, and plain exported files are easier
   to recover than opaque state.
 - Network skepticism: multicast can discover peers, but reliable sync needs
@@ -61,6 +63,13 @@ The app should have explicit repair tools:
 - merge event logs from multiple stations
 - export panic ADIF/Cabrillo/CSV from any surviving database
 
+### Accessible Operator Mode
+
+The CLI, GUI, and any future text-user-interface should share the same event
+store. A sight-impaired operator should be able to log, review, edit, delete,
+score, and export without relying on color, table position, or mouse-only
+controls. See [`accessibility-ux.md`](accessibility-ux.md).
+
 ## Roadmap
 
 ### Phase 0: Current Prototype
@@ -73,6 +82,8 @@ Already present on `rewrite-prototype`:
 - Event replay and projection rebuild.
 - Create, edit, delete, duplicate lookup, and scoring.
 - Minimal PyQt5 logger shell.
+- Console-script CLI for add, edit, delete, list, score, rebuild, and other
+  non-GUI workflows.
 - Store-only soak harness.
 - Makefile shortcuts for install, checks, GUI launch, and soak runs.
 
@@ -91,16 +102,20 @@ small practice session.
 Work:
 
 - keyboard-first logging flow
+- screen-reader and keyboard-only smoke testing
 - sticky band, mode, power, class, and section defaults
 - Enter logs, Esc clears, predictable tab order
 - preference file for station ID, operator call, class, section, and DB path
 - better selected-QSO edit/delete workflow
 - clearer duplicate warning
 - basic CSV export for quick inspection
+- documented accessible practice workflow
 
 Exit criteria:
 
 - 30 minute manual practice session without touching the mouse for normal QSOs.
+- A terminal/screen-reader workflow can add, list, score, rebuild, edit, and
+  delete practice contacts.
 - All user-visible QSO changes are represented as events.
 - Rebuild from events produces the same displayed log and score.
 
@@ -203,6 +218,7 @@ Exit criteria:
 - A clean machine can be set up from docs.
 - A club can run a practice session using only released artifacts.
 - Recovery instructions are tested, not merely written.
+- Accessible station setup instructions are tested with real assistive tooling.
 
 ## What Not To Do Yet
 
@@ -220,6 +236,8 @@ Exit criteria:
 - What is the minimum export set needed before a club practice test?
 - How much old-database migration is required for real users?
 - How should clock skew be displayed and repaired without slowing operators?
+- Should the alternate operator UX be a richer CLI, a TUI, a speech-first mode,
+  or a combination?
 
 ## Suggested Next Slice
 

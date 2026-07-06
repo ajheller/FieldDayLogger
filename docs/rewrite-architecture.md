@@ -7,12 +7,15 @@ unplugged cables, and post-event cleanup.
 
 For the broader forward-looking plan, see
 [`rewrite-roadmap.md`](rewrite-roadmap.md).
+For alternate UX and accessibility notes, see
+[`accessibility-ux.md`](accessibility-ux.md).
 
 ## Goals
 
 - Keep local logging fast and reliable even when the network is broken.
 - Make every QSO add, edit, and delete recoverable and auditable.
 - Make scoring, duplicate detection, and exports testable without a GUI.
+- Keep core logging workflows available through non-visual and non-mouse paths.
 - Support Linux and Raspberry Pi class machines as first-class targets.
 - Preserve practical Field Day workflows: keyboard-first logging, CW macros,
   CAT, WSJT-X, N1MM packets, Cloudlog, and offline operation.
@@ -97,6 +100,8 @@ should work as a single-station logger with the same local database model.
 
 - Main screen is the logger, not a landing page.
 - Keyboard-first QSO entry.
+- Screen-reader-friendly control names, status messages, and log review paths.
+- No critical status should be color-only, icon-only, or table-position-only.
 - Clear duplicate, dirty/synced, and server-seen indicators.
 - Diagnostics panel with:
   - local station ID
@@ -113,6 +118,7 @@ Core logic should be testable without Qt:
 
 - score calculation tests
 - duplicate detection tests
+- keyboard and accessibility smoke tests
 - section parsing tests
 - ADIF/Cabrillo golden-file tests
 - SQLite migration tests
@@ -139,8 +145,8 @@ Implemented on this branch:
 - Materialized contact rebuild from replayed events.
 - Store-level duplicate lookup by call, band, and mode.
 - Pure score calculation against the new QSO model.
-- `fdlogger-next-cli` for DB init, sample contacts, listing, scoring, and
-  projection rebuilds.
+- `fdlogger-next-cli` for DB init, sample contacts, add/edit/delete, listing,
+  scoring, and projection rebuilds.
 - `fdlogger-next` minimal PyQt5 logger screen with add, edit, delete, duplicate
   warning, rebuild, and live score display.
 - `fdlogger-next-soak` store-only synthetic load harness.
