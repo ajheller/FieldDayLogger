@@ -32,6 +32,8 @@ generate clean exports without hand-editing fragile files.
   to recover than opaque state.
 - Network skepticism: multicast can discover peers, but reliable sync needs
   idempotent delivery, ACKs, retries, and reconciliation.
+- Practical security: protect log integrity, recovery, and LAN trust without
+  making normal QSO entry fragile. See [`threat-model.md`](threat-model.md).
 - Tests before cleverness: scoring, export, replay, sync, and migration should
   be testable without launching Qt.
 
@@ -65,6 +67,10 @@ The app should have explicit repair tools:
 - import reviewed paper-log CSV rows with source metadata
 - merge event logs from multiple stations
 - export panic ADIF/Cabrillo/CSV from any surviving database
+
+Recovery and auditability are also security features: accidental edits,
+malformed imports, corrupt media, and bad LAN packets should be diagnosable
+instead of mysterious.
 
 ### Accessible Operator Mode
 

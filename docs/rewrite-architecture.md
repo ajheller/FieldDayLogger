@@ -11,6 +11,8 @@ For alternate UX and accessibility notes, see
 [`accessibility-ux.md`](accessibility-ux.md).
 For paper logs and OCR-assisted transcription, see
 [`paper-log-ingest.md`](paper-log-ingest.md).
+For integrity, LAN trust, and recovery-oriented security notes, see
+[`threat-model.md`](threat-model.md).
 
 ## Goals
 
@@ -20,6 +22,8 @@ For paper logs and OCR-assisted transcription, see
 - Keep core logging workflows available through non-visual and non-mouse paths.
 - Support paper logs as a recoverable, auditable offline input path.
 - Support Linux and Raspberry Pi class machines as first-class targets.
+- Keep security practical: protect log integrity, recovery, and LAN trust
+  without slowing normal QSO entry.
 - Preserve practical Field Day workflows: keyboard-first logging, CW macros,
   CAT, WSJT-X, N1MM packets, Cloudlog, and offline operation.
 - Prefer boring, inspectable local files over required cloud services.
